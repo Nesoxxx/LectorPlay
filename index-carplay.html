@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LectorCarplay - Player & GPS + Radios</title>
+<style>
+  /* Reset */
+  * {
+    margin: 0; padding: 0; box-sizing: border-box;
+  }
+  body, html {
+    height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #111;
+    color: white;
+    overflow: hidden;
+  }
+  #app {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    background-size: cover;
+    background-position: center;
+    transition: background-image 0.5s ease-in-out;
+    position: relative;
+  }
+  /* Left player panel */
+  #playerPanel {
+    flex: 1;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    gap: 15px;
+  }
+  #logoTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #logoTitle img {
+    width: 48px;
+    height: 48px;
+  }
+  #logoTitle h1 {
+    font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    background: linear-gradient(90deg, #ffea00, #ff2200);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    user-select: none;
+  }
+
+  /* Music name scroll */
+  #musicNameWrapper {
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    border: 1px solid #ff2200;
+    border-radius: 10px;
+    padding: 10px;
+    position: relative;
+    font-weight: 700;
+    font-size: 1.25rem;
+  }
+  #musicName {
+    display: inline-block;
+    padding-left: 100%;
+    animation: scrollText 15s linear infinite;
+  }
+  @keyframes scrollText {
+    0% { transform: translateX(0%); }
+    50% { transform: translateX(-50%); }
+    100% { transform: translateX(0%); }
+  }
+
+  /* Controls */
+  #controls {
+    display: flex;
+    gap: 25px;
+    align-items: center;
+  }
+  button.controlBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(280deg) brightness(125%) contrast(105%);
+    width: 36px;
+    height: 36px;
+    transition: transform 0.2s;
+  }
+  button.controlBtn:hover {
+    transform: scale(1.2);
+    filter: invert(65%) sepia(70%) saturate(650%) hue-rotate(320deg) brightness(115%) contrast(105%);
+  }
+  #progressContainer {
+    width: 100%;
+    margin-top: 15px;
+  }
+  #progress {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #444;
+    appearance: none;
+    cursor: pointer;
+  }
+  #progress::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #ff2200;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+  }
+
+  /* Volume */
+  #volumeContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  #volume {
+    width: 100px;
+  }
+
+  /* Time display */
+  #timeDisplay {
+    font-size: 0.85rem;
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  /* Radios */
+  #radioPanel {
+    margin-top: 10px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+  }
+  .radioBtn {
+    background: #222;
+    border: 2px solid #ff2200;
+    padding: 6px 14px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 700;
+    color: #ffea00;
+    user-select: none;
+    transition: background 0.3s, color 0.3s;
+  }
+  .radioBtn.active {
+    background: #ff2200;
+    color: white;
+    border-color: #ffea00;
+  }
+  .radioBtn:hover {
+    background: #ff4400;
+    color: white;
+  }
+
+  /* Right GPS panel */
+  #gpsPanel {
+    width: 320px;
+    background: rgba(15,15,15,0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 25px 10px;
+  }
+  #gpsPanel h2 {
+    font-weight: 700;
+    margin-bottom: 15px;
+    user-select: none;
+  }
+  #gpsMap {
+    width: 100%;
+    height: 300px;
+    border-radius: 15px;
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/5/5f/Apple_Music_icon.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: grayscale(70%) opacity(0.15);
+    user-select: none;
+  }
+  #gpsInfo {
+    margin-top: 20px;
+    color: #eee;
+    font-size: 0.95rem;
+  }
+
+  /* Background selector */
+  #bgSelector {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    background: rgba(0,0,0,0.7);
+    padding: 8px 15px;
+    border-radius: 25px;
+  }
+  .bgThumb {
+    width: 50px;
+    height: 35px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.3s;
+  }
+  .bgThumb:hover {
+    border-color: #ff2200;
+  }
+  .bgThumb.selected {
+    border-color: #ffea00;
+  }
+
+  /* Responsive */
+  @media(max-width: 720px) {
+    #app {
+      flex-direction: column;
+    }
+    #gpsPanel {
+      width: 100%;
+      height: 220px;
+      padding: 15px;
+    }
+    #playerPanel {
+      padding: 15px;
+      flex: none;
+      width: 100%;
+    }
+    #bgSelector {
+      bottom: 70px;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app" style="background-image: url('https://9to5mac.com/wp-content/uploads/sites/6/2023/06/CarPlay-iOS-17-5.jpeg?quality=82&strip=all&w=1024');">
+  <div id="playerPanel">
+    <div id="logoTitle">
+      <img src="https://cdn-icons-png.flaticon.com/512/659/659915.png" alt="Lector logo" />
+      <h1>LectorCarplay</h1>
+    </div>
+    <div id="musicNameWrapper">
+      <span id="musicName">Choisis ta musique mon gars...</span>
+    </div>
+    <div id="controls">
+      <button id="rewind" class="controlBtn" title="Reculer 5s" aria-label="Reculer 5 secondes">⏪</button>
+      <button id="playPause" class="controlBtn" title="Play/Pause" aria-label="Lire/Pause">▶️</button>
+      <button id="forward" class="controlBtn" title="Avancer 5s" aria-label="Avancer 5 secondes">⏩</button>
+    </div>
+    <div id="progressContainer">
+      <input type="range" id="progress" min="0" max="100" value="0" step="0.1" />
+      <div id="timeDisplay">00:00 / 00:00</div>
+    </div>
+    <div id="volumeContainer">
+      <label for="volume">Vol</label>
+      <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" />
+    </div>
+    <div id="radioPanel">
+      <button class="radioBtn" id="btnNRJ">NRJ</button>
+      <button class="radioBtn" id="btnSkyrock">Skyrock</button>
+      <button class="radioBtn active" id="btnLocal">Locale</button>
+    </div>
+  </div>
+  <div id="gpsPanel">
+    <h2>GPS</h2>
+    <img src="https://www.apple.com/v/maps/d/images/overview/intro_icon__dfyvjc1ohbcm_large.png" alt="GPS icon" style="width: 120px; opacity: 0.6; user-select:none;" />
+    <div id="gpsInfo">GPS pas encore dispo, mais ça arrive...</div>
+  </div>
+  <div id="bgSelector">
+    <img class="bgThumb selected" src="https://9to5mac.com/wp-content/uploads/sites/6/2023/06/CarPlay-iOS-17-5.jpeg?quality=82&strip=all&w=1024" alt="Fond 1" />
+    <img class="bgThumb" src="https://iphonesoft.fr/images/2022/07/wallpapers/wallpaper-2022-carplay-ios-16-gray-dark.jpg-2.jpeg" alt="Fond 2" />
+    <img class="bgThumb" src="https://i.pinimg.com/736x/f7/b7/f5/f7b7f5a16217386ba5915edc5b681e08.jpg" alt="Fond 3" />
+    <img class="bgThumb" src="https://w0.peakpx.com/wallpaper/655/444/HD-wallpaper-apple-carplay-red-blue-light.jpg" alt="Fond 4" />
+    <img class="bgThumb" src="https://images.unsplash.com/photo-1507752533523-5186b0bc4c43?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Zm9uZCUyMGQnJUMzJUE5Y3JhbiUyMHZpbGxlfGVufDB8fDB8fHww" alt="Fond 5" />
+  </div>
+</div>
+
+<audio id="audio"></audio>
+
+<script>
+  const tracks = [
+    'audio/DEALERUSB.mp3',
+    'audio/DJ_Kawest_x_Attaching_Boy-Chambre_04.mp3',
+    'audio/Denden-Ils_se_demandent.mp3',
+    'audio/JKSN-Seine_Saint-Denis.mp3',
+    'audio/VEN1-HAKAYET.mp3',
+    'audio/Padtal.mp3',
+    'audio/Sexy_Woman_-_Ziak.mp3',
+    'audio/BADPARENTINGFUNK.mp3',
+  ];
+
+  const radioStreams = {
+    nrj: 'https://nrj.cdnstream1.com/3095_128',
+    skyrock: 'http://icecast.skyrock.net/s/natio_mp3_128k'
+  };
+
+  let currentTrackIndex = 0;
+  let onRadio = false;
+
+  const audio = document.getElementById('audio');
+  const musicNameEl = document.getElementById('musicName');
+  const playPauseBtn = document.getElementById('playPause');
+  const rewindBtn = document.getElementById('rewind');
+  const forwardBtn = document.getElementById('forward');
+  const progress = document.getElementById('progress');
+  const timeDisplay = document.getElementById('timeDisplay');
+  const volumeControl = document.getElementById('volume');
+  const btnNRJ = document.getElementById('btnNRJ');
+  const btnSkyrock = document.getElementById('btnSkyrock');
+  const btnLocal = document.getElementById('btnLocal');
+  const bgThumbs = document.querySelectorAll('.bgThumb');
+  const app = document.getElementById('app');
+
+  function cleanName(path) {
+    let name = path.split('/').pop().replace('.mp3', '').replace(/_/g, ' ');
+    // Enlève (Clip Officiel), (ParolesLyrics), etc.
+    name = name.replace(/\((.*?)\)/g, '').trim();
+    return name;
+  }
+
+  function loadTrack(index) {
+    if (index < 0) index = tracks.length - 1;
+    if (index >= tracks.length) index = 0;
+    currentTrackIndex = index;
+    onRadio = false;
+    audio.src = tracks[index];
+    musicNameEl.textContent = cleanName(tracks[index]);
+    audio.load();
+    audio.play();
+    playPauseBtn.textContent = '⏸️';
+    updateRadioButtons();
+  }
+
+  function playPauseToggle() {
+    if (audio.paused) {
+      audio.play();
+      playPauseBtn.textContent = '⏸️';
+    } else {
+      audio.pause();
+      playPauseBtn.textContent = '▶️';
+    }
+  }
+
+  function playRadio(station) {
+    onRadio = true;
+    audio.src = radioStreams[station];
+    musicNameEl.textContent = station.toUpperCase() + " Radio";
+    audio.load();
+    audio.play();
+    playPauseBtn.textContent = '⏸️';
+    updateRadioButtons();
+  }
+
+  function updateRadioButtons() {
+    btnNRJ.classList.toggle('active', onRadio && musicNameEl.textContent.startsWith('NRJ'));
+    btnSkyrock.classList.toggle('active', onRadio && musicNameEl.textContent.startsWith('SKYROCK'));
+    btnLocal.classList.toggle('active', !onRadio);
+  }
+
+  playPauseBtn.addEventListener('click', playPauseToggle);
+
+  rewindBtn.addEventListener('click', () => {
+    if (!onRadio) audio.currentTime = Math.max(0, audio.currentTime - 5);
+  });
+
+  forwardBtn.addEventListener('click', () => {
+    if (!onRadio) audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+  });
+
+  progress.addEventListener('input', () => {
+    if (!onRadio && audio.duration) {
+      audio.currentTime = (progress.value / 100) * audio.duration;
+    }
+  });
+
+  audio.addEventListener('timeupdate', () => {
+    if (!onRadio && audio.duration) {
+      progress.value = (audio.currentTime / audio.duration) * 100;
+      timeDisplay.textContent = formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
+    } else {
+      progress.value = 0;
+      timeDisplay.textContent = 'Live Radio';
+    }
+  });
+
+  volumeControl.addEventListener('input', () => {
+    audio.volume = volumeControl.value;
+  });
+
+  btnNRJ.addEventListener('click', () => playRadio('nrj'));
+  btnSkyrock.addEventListener('click', () => playRadio('skyrock'));
+  btnLocal.addEventListener('click', () => loadTrack(currentTrackIndex));
+
+  function formatTime(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = Math.floor(seconds % 60);
+    return `${min < 10 ? '0' + min : min}:${sec < 10 ? '0' + sec : sec}`;
+  }
+
+  // Background change
+  bgThumbs.forEach((thumb) => {
+    thumb.addEventListener('click', () => {
+      bgThumbs.forEach(t => t.classList.remove('selected'));
+      thumb.classList.add('selected');
+      app.style.backgroundImage = `url('${thumb.src}')`;
+    });
+  });
+
+  // Charge la première musique au démarrage
+  loadTrack(currentTrackIndex);
+</script>
+</body>
+</html>
